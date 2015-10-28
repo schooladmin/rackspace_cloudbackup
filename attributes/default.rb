@@ -27,7 +27,10 @@
 
 # Datacenter to send backups to
 # TODO: Properly automate this outside this cookbook, this only works in cloud.
-default['rackspace']['datacenter'] = node['rackspace']['region']
+# Also avoid setting this attribute unless the node is actually in the rackspace cloud. Otherwise it creates a
+# a rackspace attribute and node.attribute?('rackspace') will return true even for nodes in ec2 or other
+# cloud environments.
+default['rackspace']['datacenter'] = node['rackspace']['region'] if node.attribute?('rackspace')
 
 #
 # Backups configuration
