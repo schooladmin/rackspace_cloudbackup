@@ -97,7 +97,7 @@ def triggerBackup(locationKey, config, tokenData, args):
     Make a API request to start a backup.
     Returns True on success and False on failure
     """
-    
+
     if config["locations"][locationKey]["enabled"] is False:
         if args.verbose:
             print "INFO: Skipping disabled location %s" % locationKey
@@ -116,10 +116,17 @@ def triggerBackup(locationKey, config, tokenData, args):
     req.add_data(json.dumps({"Action": "StartManual",
                              "Id": config["locations"][locationKey]["backupConfigurationId"] }))
 
-    uh = urllib2.urlopen(req)
-    
-    if uh.getcode() is not 200:
-        syslog.syslog("run_backup: INFO: Error triggering backup for %s with BackupConfigurationId %s, status code: %s" % 
+    uh = None
+    status = None
+
+    try:
+        uh = urllib2.urlopen(req)
+        status = uh.getcode()
+    except urllib2.HTTPError, e:
+        status = e.getcode()
+
+    if uh is None or uh.getcode() is not 200:
+        syslog.syslog("run_backup: INFO: Error triggering backup for %s with BackupConfigurationId %s, status code: %s" %
                       (locationKey, config["locations"][locationKey]["BackupConfigurationId"], status))
         return False
 
@@ -143,10 +150,20 @@ def awakenAgents(args, config, tokenData):
                           )
     req.add_data("") # A POST is required
 
-    uh = urllib2.urlopen(req)
-    
-    if uh.getcode() is not 200:
-        syslog.syslog("run_backup: ERROR: Error waking up agents")
+    uh = None
+    retries = 3
+
+    for i in range(0, retries):
+        try:
+            uh = urllib2.urlopen(req)
+            break
+        except urllib2.HTTPError, e:
+            syslog.syslog("run_backup: ERROR: Error waking up agents - %s - attempt %i" % (e, i + 1))
+            if i < retries:
+                time.sleep(7)
+
+    if not uh or uh.getcode() is not 200:
+        syslog.syslog("run_backup: ERROR: Error waking up agents - failed")
         sys.exit(3)
 
     # "You should wait 10-20 seconds after using this operation and then start a backup or restore."
@@ -178,9 +195,9 @@ def parseArguments():
     parser.add_argument('--conffile', action='store', default="/etc/driveclient/run_backup.conf.yaml", help="YAML Configuration file to load", type=str)
     parser.add_argument('--wakedelay', action='store', default=30, help="Number of seconds to delay after waking agents (DELAY REQUIRED)", type=int)
     parser.add_argument('--identityurl', action='store', default="https://identity.api.rackspacecloud.com", help="Rackspace Identity API URL", type=str)
-    parser.add_argument('--verbose', '-v', action='store_true', help='Turn up verbosity to 10')    
+    parser.add_argument('--verbose', '-v', action='store_true', help='Turn up verbosity to 10')
     parser.add_argument('--location', action='store', default=None, help="Specific location to back up", type=str)
- 
+
     args = parser.parse_args()
 
     return args
@@ -198,7 +215,7 @@ if __name__ == '__main__':
     if config["locations"] is None:
         syslog.syslog("run_backup: WARNING: No jobs configured!")
         sys.exit(1)
-    
+
     tokenData = cloud_auth(config, args)
     awakenAgents(args, config, tokenData)
 
@@ -213,5 +230,5 @@ if __name__ == '__main__':
     else:
         if not triggerBackup(args.location, config, tokenData, args):
             sys.exit(3)
-    
+
     sys.exit(0)

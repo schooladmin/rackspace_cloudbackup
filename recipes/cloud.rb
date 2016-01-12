@@ -102,6 +102,7 @@ node['rackspace_cloudbackup']['backups'].each do |node_job|
   cloud_backup_cron_configurator "#{job['label']} cron_configurator" do
     job job
     command "/usr/local/bin/run_backup.py --location '#{job['location']}'"
+    action node['rackspace_cloudbackup']['cron_jobs'] ? :create : :delete
   end
 
   # Set up the array the config template will use

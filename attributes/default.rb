@@ -65,6 +65,9 @@ default['rackspace']['datacenter'] = node['rackspace']['region'] if node.attribu
 # See the default hash description below for defaults and requirement details
 default['rackspace_cloudbackup']['backups'] = []
 
+# Automatically creates cron job for each backup location. Set to false to manually create cron job externally.
+default['rackspace_cloudbackup']['cron_jobs'] = true
+
 #
 # Defaults
 #

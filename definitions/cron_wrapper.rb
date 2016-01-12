@@ -19,7 +19,7 @@
 #
 # Define a common wrapper around cron we can share between cloud and non-cloud
 #
-define(:cloud_backup_cron_configurator, job: nil, command: nil) do
+define(:cloud_backup_cron_configurator, job: nil, command: nil, action: nil) do
   # Avoid nil exceptions going forward
   if params[:job]['time'].nil?
     params[:job]['time'] = {}
@@ -43,6 +43,6 @@ define(:cloud_backup_cron_configurator, job: nil, command: nil) do
     home    params[:job]['cron']['home'] || node['rackspace_cloudbackup']['backups_defaults']['cron']['home']
 
     command params[:command]
-    action :create
+    action params[:action] || :create
   end
 end
